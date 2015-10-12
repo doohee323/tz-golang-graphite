@@ -1,57 +1,92 @@
 package main
 
-import "testing"
+import (
+	"bufio"
+	"encoding/json"
+	logging "github.com/op/go-logging"
+	"github.com/stretchr/testify/assert"
+	"io"
+	"os"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
+	"tz"
+)
 
-func Test(t *testing.T) {
-	//t.Fatal()
-
-	//		m1 := Metric{*value}
-	//		data1, err := json.Marshal(m1)
-	//		log.Debug("%s\n", data1)
-	//		err = tz.NewGraphite(*method, *key, data1)
-	//		if err != nil {
-	//			log.Debug("%s\n", err)
-	//		}
-	//		time.Sleep(30000 * time.Millisecond)
-	//		m1 = Metric{"41"}
-	//		data1, err = json.Marshal(m1)
-	//		log.Debug("%s\n", data1)
-	//		err = tz.NewGraphite("sendmetric", "statsd.test.graphite_loaded3", data1)
-	//		if err != nil {
-	//			log.Debug("%s\n", err)
-	//		}
-	//		time.Sleep(30000 * time.Millisecond)
-	//		m1 = Metric{"42"}
-	//		data1, err = json.Marshal(m1)
-	//		log.Debug("%s\n", data1)
-	//		err = tz.NewGraphite("sendmetric", "statsd.test.graphite_loaded3", data1)
-	//		if err != nil {
-	//			log.Debug("%s\n", err)
-	//		}
-	//		time.Sleep(30000 * time.Millisecond)
-	//		m1 = Metric{"43"}
-	//		data1, err = json.Marshal(m1)
-	//		log.Debug("%s\n", data1)
-	//		err = tz.NewGraphite("sendmetric", "statsd.test.graphite_loaded3", data1)
-	//		if err != nil {
-	//			log.Debug("%s\n", err)
-	//		}
-	//	} else if(*method == "sendmetrics") {
-	//		// https://localhost/render?target=statsd.test.graphite_loaded4&from=-10min&rawData=true&format=json
-	//		type Metrics struct {
-	//			Date  string
-	//			Value string
-	//		}
-	//
-	//		var mArray []Metrics
-	//		mArray = append(mArray, Metrics{strconv.FormatInt(time.Now().Unix(), 10), "522"})
-	//		time.Sleep(30000 * time.Millisecond)
-	//		mArray = append(mArray, Metrics{strconv.FormatInt(time.Now().Unix(), 10), "533"})
-	//		time.Sleep(30000 * time.Millisecond)
-	//		mArray = append(mArray, Metrics{strconv.FormatInt(time.Now().Unix(), 10), "544"})
-	//		data2, err := json.Marshal(mArray)
-	//		err = tz.NewGraphite("sendmetrics", "statsd.test.graphite_loaded4", data2)
-	//		if err != nil {
-	//			log.Debug("%s\n", err)
-	//		}
+func TestXxx(t *testing.T) {
+	var log = logging.MustGetLogger("graphite")
+	var test_types = []string{"simplesend", "sendmetric", "sendmetrics"}
+	pwd, _ := os.Getwd()
+	result := 0
+	for _, tType := range test_types {
+		test_file := pwd + "/etc/" + tType + ".txt"
+		log.Debug("test_file: %s\n", test_file)
+		f, err := os.Open(test_file)
+		if err != nil {
+			log.Error("error opening file ", err)
+			t.Errorf("error: %s", err)
+			os.Exit(1)
+		}
+		defer f.Close()
+		r := bufio.NewReader(f)
+		for {
+			str, err := r.ReadString(10)
+			if err == io.EOF {
+				break
+			} else if err != nil {
+				log.Error("%s\n", err)
+				t.Errorf("error: %s", err)
+				result++
+			}
+			log.Debug("str ", str)
+			arry := strings.Split(str, ",")
+			if tType == "simplesend" {
+				// https://localhost/render?target=statsd.test.graphite_loaded1&from=-10min&rawData=true&format=json
+				type SimpleMessage struct {
+					Value string
+				}
+				m := SimpleMessage{strings.Trim(arry[1], "\n")}
+				data, err := json.Marshal(m)
+				log.Debug("%s\n", data)
+				err = tz.NewGraphite(tType, arry[0], data)
+				if err != nil {
+					log.Error("%s\n", err)
+					t.Errorf("error: %s for %+v", err, data)
+					result++
+				}
+			} else if tType == "sendmetric" {
+				// https://localhost/render?target=statsd.test.graphite_loaded2&from=-10min&rawData=true&format=json
+				type Metric2 struct {
+					Value string
+				}
+				m1 := Metric2{strings.Trim(arry[1], "\n")}
+				data, err := json.Marshal(m1)
+				log.Debug("%s\n", data)
+				err = tz.NewGraphite(tType, arry[0], data)
+				if err != nil {
+					log.Error("%s\n", err)
+					t.Errorf("error: %s for %+v", err, data)
+					result++
+				}
+			} else if tType == "sendmetrics" {
+				// https://localhost/render?target=statsd.test.graphite_loaded3&from=-10min&rawData=true&format=json
+				type Metrics2 struct {
+					Date  string
+					Value string
+				}
+				var mArray []Metrics2
+				mArray = append(mArray, Metrics2{strconv.FormatInt(time.Now().Unix(), 10), strings.Trim(arry[1], "\n")})
+				data, err := json.Marshal(mArray)
+				err = tz.NewGraphite(tType, arry[0], data)
+				if err != nil {
+					log.Error("%s\n", err)
+					t.Errorf("error: %s for %+v", err, data)
+					result++
+				}
+			}
+			time.Sleep(1000 * time.Millisecond)
+		}
+	}
+	assert.NotEqual(t, result, 0, "at least test should pass")
 }

@@ -38,7 +38,7 @@ func main() {
 	log.Debug("%s\n", *value)
 
 	if *method == "simplesend" {
-		// https://localhost/render?target=httpbin.org&from=-10min&rawData=true&format=json
+		// https://localhost/render?target=statsd.test.graphite_loaded2&from=-10min&rawData=true&format=json
 		if *key == "" {
 			*key = "statsd.test.graphite_loaded2"
 		}
@@ -66,11 +66,11 @@ func main() {
 			*value = "40"
 		}
 
-		type Metric struct {
+		type Metric2 struct {
 			Value string
 		}
 
-		m1 := Metric{*value}
+		m1 := Metric2{*value}
 		data1, err := json.Marshal(m1)
 		log.Debug("%s\n", data1)
 		err = tz.NewGraphite(*method, *key, data1)
@@ -86,13 +86,13 @@ func main() {
 			*value = "522"
 		}
 
-		type Metrics struct {
+		type Metrics2 struct {
 			Date  string
 			Value string
 		}
 
-		var mArray []Metrics
-		mArray = append(mArray, Metrics{strconv.FormatInt(time.Now().Unix(), 10), *value})
+		var mArray []Metrics2
+		mArray = append(mArray, Metrics2{strconv.FormatInt(time.Now().Unix(), 10), *value})
 		data2, err := json.Marshal(mArray)
 		err = tz.NewGraphite(*method, *key, data2)
 		if err != nil {

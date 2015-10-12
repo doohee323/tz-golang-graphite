@@ -1,0 +1,4 @@
+statsd.test.graphite_loaded2,1
+statsd.test.graphite_loaded2,2
+statsd.test.graphite_loaded2,3
+statsd.test.graphite_loaded2,4

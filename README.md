@@ -19,6 +19,7 @@
   go get -u github.com/jessevdk/go-flags  
   go get -u github.com/vaughan0/go-ini  
   go get -u github.com/op/go-logging  
+  go get -u github.com/stretchr/testify/assert
 
 3. run IDE
 

@@ -16,7 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-) 
+)
 
 //this is log file
 var logFile *os.File
@@ -30,7 +30,7 @@ var err error
 var Build string
 
 //the following are flags passed from commandline
-var Configfile *string = flag.String("config", "/etc/tz/graphite.cfg", "Config file location")
+var Configfile *string = flag.String("config", "/Users/dhong/git_etc/tz_golang_graphite/etc/graphite.cfg", "Config file location")
 var help *bool = flag.Bool("help", false, "Show these options")
 var version *string = flag.String("version", Build, "Build version")
 var cfg ini.File
@@ -55,6 +55,12 @@ func NewGraphite(method string, key string, args []byte) error {
 	logfile, ok := cfg.Get("system", "logfile")
 	if !ok {
 		log.Fatal("'logfile' missing from 'system' section")
+	}
+
+	logDir := logfile[0:strings.LastIndex(logfile, "/")]
+	err = os.MkdirAll(logDir, 0777)
+	if err != nil {
+		log.Fatalf("MkdirAll error: %s", err)
 	}
 
 	//open log file
@@ -127,9 +133,6 @@ func NewGraphite(method string, key string, args []byte) error {
 		err = Graphite.SendMetric(Metric)
 		log.Debug("Loaded Graphite SendMetric: %#v", err)
 	} else if method == "sendmetrics" {
-		//		type Metrics struct {
-		//			Collection []map[string]interface{}
-		//		}
 		metas := make([]map[string]interface{}, 0)
 		json.Unmarshal(args, &metas)
 		log.Debug("metas: %#v", metas)
