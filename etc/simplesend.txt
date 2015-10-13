@@ -1,4 +1,2 @@
-statsd.test.graphite_loaded1,1
-statsd.test.graphite_loaded1,2
-statsd.test.graphite_loaded1,3
-statsd.test.graphite_loaded1,4
+deploys.test1.count1,1
+deploys.test1.count1,2

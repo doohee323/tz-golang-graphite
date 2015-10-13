@@ -1,6 +1,6 @@
 /**
 * Graphite Module by Dewey
-* Usage: tzgraphite -method=simplesend -key=statsd.test.graphite_loaded2 -value=50 (-config=/Users/mac/Documents/go/workspace/tz_golang_graphite/etc/graphite.cfg)
+* Usage: tzgraphite -method=simplesend -key=deploys.test1.count2 -value=50 (-config=/Users/dhong/git_etc/tz_golang_graphite/etc/graphite.cfg)
 **/
 
 package main
@@ -38,9 +38,9 @@ func main() {
 	log.Debug("%s\n", *value)
 
 	if *method == "simplesend" {
-		// https://localhost/render?target=statsd.test.graphite_loaded2&from=-10min&rawData=true&format=json
+		// https://172.30.168.10/render?target=deploys.test1.count2&from=-10min&rawData=true&format=json
 		if *key == "" {
-			*key = "statsd.test.graphite_loaded2"
+			*key = "deploys.test1.count2"
 		}
 		if *value == "" {
 			*value = "11"
@@ -58,9 +58,9 @@ func main() {
 			log.Debug("%s\n", err)
 		}
 	} else if *method == "sendmetric" {
-		// https://localhost/render?target=statsd.test.graphite_loaded3&from=-10min&rawData=true&format=json
+		// https://172.30.168.10/render?target=deploys.test1.count3&from=-10min&rawData=true&format=json
 		if *key == "" {
-			*key = "statsd.test.graphite_loaded3"
+			*key = "deploys.test1.count3"
 		}
 		if *value == "" {
 			*value = "40"
@@ -78,9 +78,9 @@ func main() {
 			log.Debug("%s\n", err)
 		}
 	} else if *method == "sendmetrics" {
-		// https://localhost/render?target=statsd.test.graphite_loaded4&from=-10min&rawData=true&format=json
+		// https://172.30.168.10/render?target=deploys.test1.count4&from=-10min&rawData=true&format=json
 		if *key == "" {
-			*key = "statsd.test.graphite_loaded4"
+			*key = "deploys.test1.count4"
 		}
 		if *value == "" {
 			*value = "522"

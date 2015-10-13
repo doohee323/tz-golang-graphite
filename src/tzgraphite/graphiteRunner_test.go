@@ -1,3 +1,8 @@
+/**
+* Graphite Module by Dewey
+* Usage: tzgraphite.test -config=/Users/dhong/git_etc/tz_golang_graphite/etc/graphite.cfg
+**/
+
 package main
 
 import (
@@ -17,7 +22,8 @@ import (
 func TestXxx(t *testing.T) {
 	var log = logging.MustGetLogger("graphite")
 	var test_types = []string{"simplesend", "sendmetric", "sendmetrics"}
-	pwd, _ := os.Getwd()
+	//pwd, _ := os.Getwd()
+	pwd := "/Users/dhong/git_etc/tz_golang_graphite"
 	result := 0
 	for _, tType := range test_types {
 		test_file := pwd + "/etc/" + tType + ".txt"
@@ -42,7 +48,7 @@ func TestXxx(t *testing.T) {
 			log.Debug("str ", str)
 			arry := strings.Split(str, ",")
 			if tType == "simplesend" {
-				// https://localhost/render?target=statsd.test.graphite_loaded1&from=-10min&rawData=true&format=json
+				// https://172.30.168.10/render?target=deploys.test1.count1&from=-10min&rawData=true&format=json
 				type SimpleMessage struct {
 					Value string
 				}
@@ -56,7 +62,7 @@ func TestXxx(t *testing.T) {
 					result++
 				}
 			} else if tType == "sendmetric" {
-				// https://localhost/render?target=statsd.test.graphite_loaded2&from=-10min&rawData=true&format=json
+				// https://172.30.168.10/render?target=deploys.test1.count2&from=-10min&rawData=true&format=json
 				type Metric2 struct {
 					Value string
 				}
@@ -70,7 +76,7 @@ func TestXxx(t *testing.T) {
 					result++
 				}
 			} else if tType == "sendmetrics" {
-				// https://localhost/render?target=statsd.test.graphite_loaded3&from=-10min&rawData=true&format=json
+				// https://172.30.168.10/render?target=deploys.test1.count3&from=-10min&rawData=true&format=json
 				type Metrics2 struct {
 					Date  string
 					Value string
@@ -88,5 +94,5 @@ func TestXxx(t *testing.T) {
 			time.Sleep(1000 * time.Millisecond)
 		}
 	}
-	assert.NotEqual(t, result, 0, "at least test should pass")
+	assert.Equal(t, result, 0, "at least test should pass")
 }
