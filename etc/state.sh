@@ -4,7 +4,7 @@ export T=$1
 
 if [[ $# -eq 0 ]];
  then
- die "usage ./state.sh c count | g for gauge]"
+ die "usage: ./state.sh g"
 fi
 
 
