@@ -1,3 +1,5 @@
 /.settings/
 /bin/
 /logs/
+/vendor/
+/glide.lock

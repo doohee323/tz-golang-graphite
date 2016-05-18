@@ -1,0 +1,7 @@
+package: tz.com/tz_golang_graphite
+import:
+- package: github.com/marpaia/graphite-golang
+- package: github.com/op/go-logging
+- package: github.com/vaughan0/go-ini
+- package: github.com/marpaia/graphite-golang
+

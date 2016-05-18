@@ -2,16 +2,25 @@
 set -x
 export T=$1
 
-lat[0]="fra1"
-lat[1]="nuq2"
+lat[0]="ord2"
+lat[1]="sin1"
+lat[2]="sin2"
+lat[3]="sjc1"
+lat[4]="sjc2"
+lat[5]="syd1"
+lat[6]="syd2"
+lat[7]="yvr1"
+lat[8]="yvr2"
+lat[9]="nuq1"
+lat[10]="nuq2"
 
 if [[ $# -eq 0 ]];
  then
- die "usage: ./count.sh g"
+ die "usage: ./count2.sh g"
 fi
 
 while true; do
-echo "ay2.dhc5.hcid.536.http_get.by_metrics.nsl_ms.${lat[$[ $RANDOM % 2 ]]}:$(( ( RANDOM % 10 )  + 0 ))|$T" | nc -w 1 -u 172.30.168.10 8125
+echo "deploys.test4.${lat[$[ $RANDOM % 3 ]]}.count2:$(( ( RANDOM % 5 )  + 0 ))|$T" | nc -w 1 -u 172.30.168.10 8125
 sleep 1
 done
 

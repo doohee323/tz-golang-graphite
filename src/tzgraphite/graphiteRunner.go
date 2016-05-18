@@ -7,13 +7,13 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	graphite "github.com/marpaia/graphite-golang"
 	logging "github.com/op/go-logging"
 	"runtime"
 	"strconv"
 	"time"
-	"tz"
-	"flag"
+	tz "tz.com/tz_golang_graphite/src/tz"
 )
 
 var log = logging.MustGetLogger("graphite")

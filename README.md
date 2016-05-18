@@ -9,17 +9,17 @@
   echo 'export PATH=$PATH:/usr/local/go/bin' >> .bash_profile  
   source .bash_profile  
 
-2. Get libraries
-  
-  mkdir /Users/mac/Documents/go  
-  export GOPATH=/Users/mac/Documents/go  
-  cd $GOPATH  
+2. install glide
+	https://github.com/Masterminds/glide
 
-  go get -u github.com/marpaia/graphite-golang  
-  go get -u github.com/jessevdk/go-flags  
-  go get -u github.com/vaughan0/go-ini  
-  go get -u github.com/op/go-logging  
-  go get -u github.com/stretchr/testify/assert
+3. Get libraries
+  
+  export GOPATH=/Users/dhong/Documents/workspace/go
+  mkdir $GOPATH  
+  cd $GOPATH  
+  cd src/tz.com/tz_golang_graphite
+
+  glide up
 
 3. run IDE
 
@@ -35,10 +35,10 @@
     > Platform Setttings > SDKs, add "go sdk"   
       "/usr/local/go"  
     > Project Setttings > Libraries, add "java"  
-      select all folders in /Users/mac/Documents/go/src > Classes  
+      select all folders in /Users/dhong/Documents/go/src > Classes  
     > Preference > Go Libraries >  
-      Global Libraries > /Users/mac/Documents/go  
-      Project Libraries > /Users/mac/Documents/workspace/dhc4  
+      Global Libraries > /Users/dhong/Documents/go  
+      Project Libraries > /Users/dhong/Documents/workspace/dhc4  
   4. Change the module type to Go project  
 
 3-2 golang eclipse
@@ -58,10 +58,10 @@
     GOROOT: /usr/local/go  
     GOOS: darwin  
     GOARCH: amd64  
-    GOPATH: /Users/mac/Documents/go  
+    GOPATH: /Users/dhong/Documents/go  
   7. run eclipse with sudo  
     cd /Applications/Eclipse.app/Contents/MacOS  
-    export GOPATH=/Users/mac/Documents/go  
+    export GOPATH=/Users/dhong/Documents/go  
     export PKG_CONFIG_PATH=/usr/share/pkgconfig/lib/pkgconfig  
     sudo eclipse  
     
