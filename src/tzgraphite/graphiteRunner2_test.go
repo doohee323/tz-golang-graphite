@@ -9,26 +9,14 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"reflect"
 	"testing"
 )
 
-type Info map[string]Container
-
-type Inner struct {
-    Key2 []map[string]interface{} `json:"rules"`
-}
-type Container struct {
-    Key Inner `json:"CNAME::viktor-r11264-test-01.fortidirector.http.r1cd.com"`
-}
-
-var cont Container
-    
 func TestBlah(t *testing.T) {
 	var log = logging.MustGetLogger("graphite_test")
+	log.Debugf("start~~")
 	//var Apiurl = "http://dhcapi.local.xdn.com/dhc/5/cloud/jobs?site=nuq2"
-	var Apiurl = "http://localhost:8080/rule/viktor-r11264-test-01.fortidirector.http.r1cd.com"
-	//	var Apiuser = "xdn"
-	//	var Apipassword = "3cftw2010"
 
 	//	var id map[string]interface{}
 	//	var ok bool
@@ -44,88 +32,57 @@ func TestBlah(t *testing.T) {
 	//		fmt.Println(m)
 	//	}
 
-	client := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}}
+	var Apiurl = "http://localhost:8080/rule/viktor-r11264-test-01.fortidirector.http.r1cd.com"
+	//	encoded := `
+	//			    {"CNAME::viktor-r11264-test-01.fortidirector.http.r1cd.com":{"rules":[{"rule_id":252,"is_default":1,"user_id":1,"action_type":"round_robin","action_meta":{"resources":[{"type":"network","id":1073,"base_url":"http://google.com/","latitude":37.4192,"longitude":-122.0574}]}}],"ruleset_id":270}}
+	//				`
+	encoded := GetHttp(Apiurl)
+	CaseJrl(encoded)
 
-	//get url content first
-	log.Debugf("Querying %s", Apiurl)
-
-	u, _ := url.Parse(Apiurl)
-	q := u.Query()
-	q.Set("version", Build)
-	Apiurl = u.String()
-
-	req, err := http.NewRequest("GET", Apiurl, nil)
-	//	req.SetBasicAuth(Apiuser, Apipassword)
-
-	response, err := client.Do(req)
-	if err != nil {
-		log.Errorf("HC API error %s", err)
-		return
-
-	} else { //good to go
-		defer response.Body.Close()
-		contents, err := ioutil.ReadAll(response.Body)
-		log.Errorf("contents: %s", contents)
-
-//		encoded := `
-//	    {"AAA": {
-//			"assdfdff" : {
-//			        "name": "john",
-//			        "age": 23
-//				}
-//			}
-//	    }`
-		
-		encoded := contents
-
-		log.Errorf("contents: %s", encoded)
-		if err != nil {
-			log.Errorf("HC API error: %s", err)
-			return
-		}
-
-		if response.StatusCode != 200 {
-			log.Errorf("HC API response code: %d", response.StatusCode)
-			return
-		}
-
-		var data Container
-
-		//this
-		err = json.Unmarshal([]byte(encoded), &data)
-		if err != nil {
-			log.Errorf("HC Obj Unpacking error %s", err)
-			return
-		}
-		fmt.Println(data)
-		fmt.Println(data)
-
-		//		if els, ok := data.Control["commands"]; ok {
-		//			if el, ok := els.([]interface{}); ok {
-		//				for _, e := range el {
-		//					if cmds, ok := e.(map[string]interface{}); ok {
-		//						for k, v := range cmds {
-		//							if reset, ok := v.(string); ok {
-		//								log.Warningf("reset %s %v", reset, k)
-		//							}
-		//						}
-		//					}
-		//				}
-		//			}
-		//		}
-		//
-		//		//hack to prevent deletion
-		//		log.Warningf("status %s", data.Control["status"])
-		//		if el, ok := data.Control["status"]; !ok {
-		//			if els, ok := el.(string); ok {
-		//				log.Warningf("reset %s", els)
-		//			}
-		//		}
-	}
+	//		if els, ok := data.Control["commands"]; ok {
+	//			if el, ok := els.([]interface{}); ok {
+	//				for _, e := range el {
+	//					if cmds, ok := e.(map[string]interface{}); ok {
+	//						for k, v := range cmds {
+	//							if reset, ok := v.(string); ok {
+	//								log.Warningf("reset %s %v", reset, k)
+	//							}
+	//						}
+	//					}
+	//				}
+	//			}
+	//		}
+	//
+	//		//hack to prevent deletion
+	//		log.Warningf("status %s", data.Control["status"])
+	//		if el, ok := data.Control["status"]; !ok {
+	//			if els, ok := el.(string); ok {
+	//				log.Warningf("reset %s", els)
+	//			}
+	//		}
 
 	//t.Errorf("blah blah")
 	assert.Equal(t, 123, 123, "they should be equal")
 	//t.Fatal()
+}
+
+func CaseJrl(encoded string) {
+	type Rules struct {
+		Rules []map[string]interface{} `json:"rules"`
+	}
+	type CName struct {
+		R1 Rules `json:"CNAME::viktor-r11264-test-01.fortidirector.http.r1cd.com"`
+	}
+	var data CName
+
+	err = json.Unmarshal([]byte(encoded), &data)
+	if err != nil {
+		log.Errorf("HC Obj Unpacking error %s", err)
+		return
+	}
+	fmt.Println(data.R1.Rules)
+	fmt.Println(reflect.TypeOf(data.R1.Rules))
+	fmt.Println(data.R1.Rules[0]["rule_id"])
 }
 
 // case 1:
@@ -197,3 +154,47 @@ func TestBlah(t *testing.T) {
 //
 //	var rules2 = m[key].(map[string]interface{})["rules"].(map[string]interface{})
 //	fmt.Println(rules2)
+
+func GetHttp(Apiurl string) string {
+	//var Apiurl = "http://localhost:8080/rule/viktor-r11264-test-01.fortidirector.http.r1cd.com"
+	//	var Apiuser = "xdn"
+	//	var Apipassword = "3cftw2010"
+	client := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}}
+
+	//get url content first
+	log.Debugf("Querying %s", Apiurl)
+
+	u, _ := url.Parse(Apiurl)
+	q := u.Query()
+	q.Set("version", Build)
+	Apiurl = u.String()
+
+	req, err := http.NewRequest("GET", Apiurl, nil)
+	//	req.SetBasicAuth(Apiuser, Apipassword)
+
+	response, err := client.Do(req)
+	if err != nil {
+		log.Errorf("HC API error %s", err)
+		return ""
+
+	} else { //good to go
+		defer response.Body.Close()
+		contents, err := ioutil.ReadAll(response.Body)
+		log.Errorf("contents: %s", contents)
+
+		encoded := contents
+
+		log.Errorf("contents: %s", encoded)
+		if err != nil {
+			log.Errorf("HC API error: %s", err)
+			return ""
+		}
+
+		if response.StatusCode != 200 {
+			log.Errorf("HC API response code: %d", response.StatusCode)
+			return ""
+		}
+
+		return string(contents)
+	}
+}
