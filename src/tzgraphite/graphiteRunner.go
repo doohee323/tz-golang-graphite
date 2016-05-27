@@ -1,6 +1,6 @@
 /**
 * Graphite Module by Dewey
-* Usage: tzgraphite -method=simplesend -key=deploys.test1.count2 -value=50 (-config=/Users/dhong/git_etc/tz_golang_graphite/etc/graphite.cfg)
+* Usage: tzgraphite -method=simplesend -key=deploys.test1.count2 -value=50 (-config=/Users/dhong/Documents/workspace/go/src/tz.com/tz_golang_graphite/etc/graphite.cfg)
 **/
 
 package main
@@ -10,7 +10,7 @@ import (
 	"flag"
 	graphite "github.com/marpaia/graphite-golang"
 	logging "github.com/op/go-logging"
-	"runtime"
+//	"runtime"
 	"strconv"
 	"time"
 	tz "tz.com/tz_golang_graphite/src/tz"
@@ -31,7 +31,7 @@ func init() {
 func main() {
 	flag.Parse()
 
-	runtime.GOMAXPROCS(runtime.NumCPU())
+//	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	log.Debug("%s\n", *method)
 	log.Debug("%s\n", *key)

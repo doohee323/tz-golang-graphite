@@ -30,7 +30,7 @@ var err error
 var Build string
 
 //the following are flags passed from commandline
-var Configfile *string = flag.String("config", "/Users/dhong/git_etc/tz_golang_graphite/etc/graphite.cfg", "Config file location")
+var Configfile *string = flag.String("config", "/Users/dhong/Documents/workspace/go/src/tz.com/tz_golang_graphite/etc/graphite.cfg", "Config file location")
 var help *bool = flag.Bool("help", false, "Show these options")
 var version *string = flag.String("version", Build, "Build version")
 var cfg ini.File

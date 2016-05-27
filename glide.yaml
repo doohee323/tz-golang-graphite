@@ -4,4 +4,4 @@ import:
 - package: github.com/op/go-logging
 - package: github.com/vaughan0/go-ini
 - package: github.com/marpaia/graphite-golang
-
+- package: github.com/stretchr/testify

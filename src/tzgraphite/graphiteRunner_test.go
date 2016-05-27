@@ -1,6 +1,6 @@
 /**
 * Graphite Module by Dewey
-* Usage: tzgraphite.test -config=/Users/dhong/git_etc/tz_golang_graphite/etc/graphite.cfg
+* Usage: tzgraphite.test -config=/Users/dhong/Documents/workspace/go/src/tz.com/tz_golang_graphite/etc/graphite.cfg
 **/
 
 package main
@@ -8,7 +8,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
-	logging "github.com/op/go-logging"
+	"github.com/op/go-logging"
 	"github.com/stretchr/testify/assert"
 	"io"
 	"os"
@@ -16,14 +16,27 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"tz"
+	tz "tz.com/tz_golang_graphite/src/tz"
 )
 
 func TestXxx(t *testing.T) {
-	var log = logging.MustGetLogger("graphite")
+	var log = logging.MustGetLogger("graphite_test")
+
+	backend1 := logging.NewLogBackend(os.Stderr, "", 0)
+	backend2 := logging.NewLogBackend(os.Stderr, "", 0)
+	var format = logging.MustStringFormatter(
+		`%{color}%{time:15:04:05.000} %{shortfunc} ▶ %{level:.4s} %{id:03x}%{color:reset} %{message}`,
+	)
+	
+	backend2Formatter := logging.NewBackendFormatter(backend2, format)
+	backend1Leveled := logging.AddModuleLevel(backend1)
+    backend1Leveled.SetLevel(logging.ERROR, "")
+
+    logging.SetBackend(backend1Leveled, backend2Formatter)
+	
 	var test_types = []string{"simplesend", "sendmetric", "sendmetrics"}
-	//pwd, _ := os.Getwd()
-	pwd := "/Users/dhong/git_etc/tz_golang_graphite"
+	//	pwd, _ := os.Getwd()
+	pwd := "/Users/dhong/Documents/workspace/go/src/tz.com/tz_golang_graphite"
 	result := 0
 	for _, tType := range test_types {
 		test_file := pwd + "/etc/" + tType + ".txt"
