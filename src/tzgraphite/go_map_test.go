@@ -4,17 +4,26 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	_ "github.com/marpaia/graphite-golang"
 	logging "github.com/op/go-logging"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"reflect"
+	"runtime"
+	"strconv"
 	"testing"
 )
 
 func TestMap(t *testing.T) {
-	var log = logging.MustGetLogger("graphite_test")
+	var log = logging.MustGetLogger("TestMap")
+
+	runtime.GOMAXPROCS(1)
+//	runtime.GOMAXPROCS(runtime.NumCPU())
+	fmt.Println(runtime.GOMAXPROCS(0))
+	fmt.Println("CPU Count : ", runtime.NumCPU())
+
 	log.Debugf("start~~")
 	//var Apiurl = "http://dhcapi.local.xdn.com/dhc/5/cloud/jobs?site=nuq2"
 
@@ -158,7 +167,7 @@ func CaseMap2(encoded string) {
 	var m map[string]interface{}
 	err := json.Unmarshal([]byte(encoded), &m)
 	if err != nil {
-		panic(err)
+		errorMsg(err)
 	}
 	fmt.Println(m)
 
@@ -172,7 +181,7 @@ func CaseMap3(encoded string) {
 	var m map[string]interface{}
 	err := json.Unmarshal([]byte(encoded), &m)
 	if err != nil {
-		panic(err)
+		errorMsg(err)
 	}
 	var key = "CNAME::viktor-r11264-test-01.fortidirector.http.r1cd.com"
 	fmt.Println(m[key])
@@ -188,7 +197,6 @@ func CaseMap3(encoded string) {
 }
 
 func GetHttp(Apiurl string) string {
-	return ""
 	//var Apiurl = "http://localhost:8080/rule/viktor-r11264-test-01.fortidirector.http.r1cd.com"
 	//	var Apiuser = "xdn"
 	//	var Apipassword = "3cftw2010"
@@ -207,20 +215,26 @@ func GetHttp(Apiurl string) string {
 
 	response, err := client.Do(req)
 	if err != nil {
-		log.Errorf("API error %s", err)
+		errorMsg(err)
 		return ""
 	} else { //good to go
 		defer response.Body.Close()
 		contents, err := ioutil.ReadAll(response.Body)
 		log.Errorf("contents: %s", contents)
 		if err != nil {
-			log.Errorf("API error: %s", err)
-			panic(err)
+			errorMsg(err)
 		}
 		if response.StatusCode != 200 {
-			log.Errorf("response code: %d", response.StatusCode)
-			panic(err)
+			errorMsg("response code: " + strconv.Itoa(response.StatusCode))
 		}
 		return string(contents)
 	}
+}
+
+func errorMsg(err interface{}) {
+	defer func() {
+		s := recover()
+		log.Errorf("API error %v", s)
+	}()
+	panic(err)
 }

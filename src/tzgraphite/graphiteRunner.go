@@ -16,6 +16,7 @@ import (
 	tz "tz.com/tz_golang_graphite/src/tz"
 )
 
+// local variables
 var log = logging.MustGetLogger("graphite")
 var err error
 var Build string
