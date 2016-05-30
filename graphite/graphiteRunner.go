@@ -13,7 +13,7 @@ import (
 //	"runtime"
 	"strconv"
 	"time"
-	tz "tz.com/tz_golang_graphite/src/tz"
+	tz "tz.com/tz_golang_graphite/libs"
 )
 
 // local variables

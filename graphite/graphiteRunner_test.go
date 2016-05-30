@@ -16,7 +16,7 @@ import (
 	"strings"
 	"testing"
 	"time"
-	tz "tz.com/tz_golang_graphite/src/tz"
+	tz "tz.com/tz_golang_graphite/libs"
 )
 
 func TestXxx(t *testing.T) {

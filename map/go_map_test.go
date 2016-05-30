@@ -16,8 +16,10 @@ import (
 	"testing"
 )
 
+var log = logging.MustGetLogger("TestMap")
+var Build = "aaa"
+
 func TestMap(t *testing.T) {
-	var log = logging.MustGetLogger("TestMap")
 
 	runtime.GOMAXPROCS(1)
 //	runtime.GOMAXPROCS(runtime.NumCPU())
@@ -75,7 +77,7 @@ func CaseJrl(encoded string) string {
 	}
 	var data CName
 
-	err = json.Unmarshal([]byte(encoded), &data)
+	err := json.Unmarshal([]byte(encoded), &data)
 	if err != nil {
 		log.Errorf("HC Obj Unpacking error %s", err)
 		return "fail"
