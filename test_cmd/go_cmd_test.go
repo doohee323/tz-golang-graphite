@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	_ "io/ioutil"
+	"io/ioutil"
 	"log"
 	"math/big"
-	_ "net/http"
+	"net/http"
 	"runtime"
 	"strconv"
 	"sync"
@@ -14,79 +14,92 @@ import (
 )
 
 var fetched = struct {
-	m map[string]error // 중복 검사를 위한 URL과 에러 값 저장
+	m map[int]error
 	sync.Mutex
-}{m: make(map[string]error)} // 변수를 선언하면서 이름이 없는 구조체를 정의하고
-// 초깃값을 생성하여 대입
+}{m: make(map[int]error)}
 
-type result struct { // 결괏값을 저장할 구조체
-	url  string // 가져온 URL
-	name string // 사용자 이름
+type result struct {
+	url     int
+	content string
 }
 
-func fetch(url string) (string, error) {
-	//	res, err := http.Get(url) // URL에서 HTML 데이터를 가져옴
-	//	if err != nil {
-	//		log.Println(err)
-	//		return "", err
-	//	}
-	doc := "aaa"
-	//	defer res.Body.Close()
-	//	doc, err := ioutil.ReadAll(res.Body)
-	return doc, nil
+func fetch(url int) (string, error) {
+	if url == -1 {
+		return "", nil
+	}
+	var urlstr = "http://core.local.xdn.com/1/stats/uptime_list?company_id=1&start_time=1464636372&end_time=1464722772&hc_id=" + strconv.Itoa(url)
+	log.Printf("==== %s", urlstr)
+	res, err := http.Get(urlstr)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+	defer res.Body.Close()
+	doc, err := ioutil.ReadAll(res.Body)
+	return string(doc), nil
 }
 
-func parseFollowing(url string, doc string, urls chan string) <-chan string {
+func parseFollowing(url int, doc string, urls chan int) <-chan string {
 	content := make(chan string)
 
-	go func() { // 교착 상태가 되지 않도록 고루틴으로 실행
+	go func() {
 		content <- doc
-		i, _ := strconv.Atoi(url)
-		i++
-		urls <- strconv.Itoa(i)
-	}()
+		chk := false
+		val := -1
+		fetched.Lock()
+		for n := range all {
+			if _, ok := fetched.m[all[n]]; !ok {
+				chk = true
+				val = all[n]
+				break
+			}
+		}
+		if chk == false {
 
-	return content // 채널을 리턴
+		}
+		urls <- val
+		fetched.Unlock()
+	}()
+	return content
 }
 
-func crawl(url string, urls chan string, c chan<- result) {
-	fetched.Lock()                   // 맵은 뮤텍스로 보호
-	if _, ok := fetched.m[url]; ok { // URL 중복 처리 여부를 검사
+func crawl(url int, urls chan int, c chan<- result) {
+	fetched.Lock()
+	if _, ok := fetched.m[url]; ok {
 		fetched.Unlock()
 		return
 	}
 	fetched.Unlock()
 
-	doc, err := fetch(url) // URL에서 파싱된 HTML 데이터를 가져옴
-	if err != nil {        // URL을 가져오지 못했을 때
-		go func(u string) { // 교착 상태가 되지 않도록 고루틴을 생성
-			urls <- u // 채널에 URL을 보냄
+	doc, err := fetch(url)
+	if err != nil {
+		go func(u int) {
+			urls <- u
 		}(url)
 		return
 	}
 
 	fetched.Lock()
-	fetched.m[url] = err // 가져온 URL은 맵에 URL과 에러 값 저장
+	fetched.m[url] = err
 	fetched.Unlock()
 
-	doc = <-parseFollowing(url, doc, urls) // 사용자 정보, 팔로잉 URL을 구함
-
-	log.Printf("---- %s %s", url, doc)
-	c <- result{url, doc} // 가져온 URL과 사용자 이름을 구조체 인스턴스로
-	// 생성하여 채널 c에 보냄
+	doc = <-parseFollowing(url, doc, urls)
+	//	log.Printf("---- %d %s", url, doc)
+	c <- result{url, doc}
 }
 
-// 실제 작업을 처리하는 worker 함수
-func worker(done <-chan struct{}, urls chan string, c chan<- result) {
-	for url := range urls { // urls 채널에서 URL을 가져옴
-		//		select {
-		//		case <-done: // 채널이 닫히면 worker 함수를 빠져나옴
-		//			return
-		//		default:
-		crawl(url, urls, c) // URL 처리
-		//		}
+func worker(done <-chan struct{}, urls chan int, c chan<- result) {
+	for url := range urls {
+		select {
+		case <-done:
+			return
+		default:
+			crawl(url, urls, c)
+		}
 	}
 }
+
+var all []int
 
 func TestMap(t *testing.T) {
 	start := time.Now()
@@ -94,36 +107,37 @@ func TestMap(t *testing.T) {
 	fmt.Println(r.Binomial(1000, 10))
 
 	numCPUs := runtime.NumCPU()
-	runtime.GOMAXPROCS(numCPUs) // 모든 CPU를 사용하도록 설정
+	runtime.GOMAXPROCS(numCPUs)
 
-	urls := make(chan string)   // 작업을 요청할 채널
-	done := make(chan struct{}) // 작업 고루틴에 정지 신호를 보낼 채널
-	c := make(chan result)      // 결괏값을 저장할 채널
+	all = append(all, 1418, 1419, 2502, 2694, 2932, 2933, 2695)
+	urls := make(chan int)
+	done := make(chan struct{})
+	c := make(chan result)
 
 	var wg sync.WaitGroup
-	const numWorkers = 5
+	const numWorkers = 10
 	wg.Add(numWorkers)
-	for i := 0; i < numWorkers; i++ { // 작업을 처리할 고루틴을 10개 생성
+	for i := 0; i < numWorkers; i++ {
 		go func() {
 			worker(done, urls, c)
-			//			wg.Done()
+			wg.Done()
 		}()
 	}
 
-	//	go func() {
-	//		wg.Wait() // 고루틴이 끝날 때까지 대기
-	//		close(c)  // 대기가 끝나면 결괏값 채널을 닫음
-	//	}()
+	go func() {
+		wg.Wait()
+		close(c)
+	}()
 
-	urls <- "1" // 최초 URL을 보냄
+	urls <- -1
 
 	count := 0
-	for r := range c { // 결과 채널에 값이 들어올 때까지 대기한 뒤 값을 가져옴
-		fmt.Println(r.name)
+	for r := range c {
+		log.Printf("==== %d %s", r.url, r.content)
 
 		count++
-		if count > 2 { // 100명만 출력한 뒤
-			close(done) // done을 닫아서 worker 고루틴을 종료
+		if count > len(all) {
+			close(done)
 			break
 		}
 	}
