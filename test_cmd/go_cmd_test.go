@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -27,7 +28,16 @@ func fetch(url int) (string, error) {
 	if url == -1 {
 		return "", nil
 	}
-	var urlstr = "http://core.local.xdn.com/1/stats/uptime_list?company_id=1&start_time=1464636372&end_time=1464722772&hc_id=" + strconv.Itoa(url)
+	var urlstr = ""
+	if 1 == 1 {
+		urlstr = "http://core.local.xdn.com/1/stats/uptime_list?company_id=1&start_time=1464636372&end_time=1464722772&hc_id=" + strconv.Itoa(url)
+	} else {
+		var hcid = "0.0.1.4.1.8"
+		var hcid2 = formatHcid(strconv.Itoa(url))
+		var baseUrl = "http://173.243.129.12/render?target=summarize(averageSeries(dhc.stats.hcid.0.0.1.4.1.8.*.metrics.state.*),%221hour%22,%22avg%22)&target=summarize(averageSeries(dhc.stats.hcid.0.0.1.4.1.8.*.judge.state),%221hour%22,%22avg%22)&from=-1440min&until=-0min&format=json"
+		urlstr = strings.Replace(baseUrl, hcid, hcid2, -1)
+	}
+
 	log.Printf("==== %s", urlstr)
 	res, err := http.Get(urlstr)
 	if err != nil {
@@ -97,6 +107,28 @@ func worker(done <-chan struct{}, urls chan int, c chan<- result) {
 			crawl(url, urls, c)
 		}
 	}
+}
+
+func formatHcid(hcid string) string {
+	maxlen := 6
+	out := ""
+	currlen := 0
+
+	for _, r := range hcid {
+		char := string(r)
+		out = fmt.Sprintf("%s.%s", out, char)
+		currlen++
+	}
+
+	out = strings.Trim(out, ".")
+
+	//now lets see how much we need to pad it
+	pad := maxlen - currlen
+	for i := 1; i <= pad; i++ {
+		out = fmt.Sprintf("%s.%s", "0", out)
+	}
+	log.Printf("shard: %s", out)
+	return out
 }
 
 var all []int
