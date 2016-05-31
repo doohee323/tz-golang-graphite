@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"golang.org/x/net/html" // HTML 파싱 해키지
 	"log"
+	"math/big"
 	"net/http"
 	"runtime"
 	"sync"
-	"math/big"
 	"testing"
 	"time"
 )
@@ -105,7 +105,12 @@ func crawl(url string, urls chan string, c chan<- result) {
 // 실제 작업을 처리하는 worker 함수
 func worker(done <-chan struct{}, urls chan string, c chan<- result) {
 	for url := range urls { // urls 채널에서 URL을 가져옴
-		crawl(url, urls, c) // URL 처리
+//		select {
+//		case <-done: // 채널이 닫히면 worker 함수를 빠져나옴
+//			return
+//		default:
+			crawl(url, urls, c) // URL 처리
+//		}
 	}
 }
 
@@ -122,18 +127,19 @@ func TestMap(t *testing.T) {
 	c := make(chan result)      // 결괏값을 저장할 채널
 
 	var wg sync.WaitGroup
-	const numWorkers = 100
+	const numWorkers = 10
 	wg.Add(numWorkers)
 	for i := 0; i < numWorkers; i++ { // 작업을 처리할 고루틴을 10개 생성
 		go func() {
 			worker(done, urls, c)
+//			wg.Done()
 		}()
 	}
 
-	go func() {
-		wg.Wait() // 고루틴이 끝날 때까지 대기
-		close(c)  // 대기가 끝나면 결괏값 채널을 닫음
-	}()
+//	go func() {
+//		wg.Wait() // 고루틴이 끝날 때까지 대기
+//		close(c)  // 대기가 끝나면 결괏값 채널을 닫음
+//	}()
 
 	urls <- "https://github.com/pyrasis/following" // 최초 URL을 보냄
 
