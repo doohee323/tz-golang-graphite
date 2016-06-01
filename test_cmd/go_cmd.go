@@ -21,12 +21,16 @@ import (
 
 //this is log file
 var (
-	logFile   *os.File
-	logPath                 = "/Users/dhong/tmp/test.log"
-	LOGFMT                  = "%{color}%{time:15:04:05.000000} %{shortfunc} ▶ %{level:.4s} %{id:03x}%{color:reset} %{message}"
-	logFormat               = logging.MustStringFormatter(LOGFMT)
-	log                     = logging.MustGetLogger("logfile")
-	Gloglevel logging.Level = logging.DEBUG
+	HCIDS       []int
+	STYPE       string
+	LOGFILE     *os.File
+	CORE_URL                  = "http://core.local.xdn.com/1/stats/uptime_list?company_id=1&start_time=1464636372&end_time=1464722772&hc_id="
+	GRAPHTE_URL               = "http://173.243.129.129/render?target=summarize(averageSeries(dhc.stats.hcid.0.0.1.4.1.8.*.metrics.state.*),%221hour%22,%22avg%22)&target=summarize(averageSeries(dhc.stats.hcid.0.0.1.4.1.8.*.judge.state),%221hour%22,%22avg%22)&from=-1440min&until=-0min&format=json"
+	LOGPATH                   = "/Users/dhong/tmp/test.log"
+	LOGFMT                    = "%{color}%{time:15:04:05.000000} %{shortfunc} ▶ %{level:.4s} %{id:03x}%{color:reset} %{message}"
+	LOGFORMAT                 = logging.MustStringFormatter(LOGFMT)
+	LOG                       = logging.MustGetLogger("logfile")
+	GLOGLEVEL   logging.Level = logging.DEBUG
 )
 
 var fetched = struct {
@@ -39,20 +43,12 @@ type result struct {
 	content string
 }
 
-const (
-	CORE_URL    = "http://core.local.xdn.com/1/stats/uptime_list?company_id=1&start_time=1464636372&end_time=1464722772&hc_id="
-	GRAPHTE_URL = "http://173.243.129.129/render?target=summarize(averageSeries(dhc.stats.hcid.0.0.1.4.1.8.*.metrics.state.*),%221hour%22,%22avg%22)&target=summarize(averageSeries(dhc.stats.hcid.0.0.1.4.1.8.*.judge.state),%221hour%22,%22avg%22)&from=-1440min&until=-0min&format=json"
-)
-
-var _hcids []int
-var _type string
-
 func fetch(url int) (string, error) {
 	if url == -1 {
 		return "", nil
 	}
 	var urlstr = ""
-	if _type == "core" {
+	if STYPE == "core" {
 		urlstr = CORE_URL + strconv.Itoa(url)
 	} else {
 		var hcid = "0.0.1.4.1.8"
@@ -61,10 +57,10 @@ func fetch(url int) (string, error) {
 		urlstr = strings.Replace(baseUrl, hcid, hcid2, -1)
 	}
 
-	log.Debug("==== %s", urlstr)
+	LOG.Debug("==== %s", urlstr)
 	res, err := http.Get(urlstr)
 	if err != nil {
-		log.Debug(err)
+		LOG.Debug(err)
 		return "", err
 	}
 	defer res.Body.Close()
@@ -79,10 +75,10 @@ func parseFollowing(url int, doc string, urls chan int) <-chan string {
 		chk := false
 		val := -1
 		fetched.Lock()
-		for n := range _hcids {
-			if _, ok := fetched.m[_hcids[n]]; !ok {
+		for n := range HCIDS {
+			if _, ok := fetched.m[HCIDS[n]]; !ok {
 				chk = true
-				val = _hcids[n]
+				val = HCIDS[n]
 				break
 			}
 		}
@@ -116,7 +112,7 @@ func crawl(url int, urls chan int, c chan<- result) {
 	fetched.Unlock()
 
 	doc = <-parseFollowing(url, doc, urls)
-	//	log.Debug("---- %d %s", url, doc)
+	//	LOG.Debug("---- %d %s", url, doc)
 	c <- result{url, doc}
 }
 
@@ -149,7 +145,7 @@ func formatHcid(hcid string) string {
 	for i := 1; i <= pad; i++ {
 		out = fmt.Sprintf("%s.%s", "0", out)
 	}
-	log.Debug("shard: %s", out)
+	LOG.Debug("shard: %s", out)
 	return out
 }
 
@@ -185,16 +181,16 @@ func _main() int {
 
 	count := 0
 	for r := range c {
-		log.Debug("==== %d %s", r.url, r.content)
+		LOG.Debug("==== %d %s", r.url, r.content)
 		count++
-		if count > len(_hcids) {
+		if count > len(HCIDS) {
 			close(done)
 			break
 		}
 	}
 
 	elapsed := time.Since(start)
-	log.Debug("It took %s", elapsed)
+	LOG.Debug("It took %s", elapsed)
 	return count - 1
 }
 
@@ -219,14 +215,14 @@ func readLine(path string) string {
 // http://localhost:8080/main/core/1418,1419,2502,2694,2932,2933,2695
 // http://localhost:8080/main/graphite/1418,1419,2502,2694,2932,2933,2695
 func mainHandle(w http.ResponseWriter, r *http.Request) {
-	_type = r.URL.Query().Get(":type")
+	STYPE = r.URL.Query().Get(":type")
 	hcidStr := r.URL.Query().Get(":hcids")
-	fmt.Println(_type, hcidStr)
+	fmt.Println(STYPE, hcidStr)
 
 	arry := strings.Split(hcidStr, ",")
 	for i := range arry {
 		n, _ := strconv.Atoi(arry[i])
-		_hcids = append(_hcids, n)
+		HCIDS = append(HCIDS, n)
 	}
 
 	res := make(map[string]string)
@@ -235,11 +231,11 @@ func mainHandle(w http.ResponseWriter, r *http.Request) {
 	res["status"] = "OK"
 	res["ts"] = time.Now().String()
 	res["count"] = strconv.Itoa(result)
-	res["result"] = readLine(logPath)
+	res["result"] = readLine(LOGPATH)
 
 	b, err := json.Marshal(res)
 	if err != nil {
-		log.Errorf("error: %s", err)
+		LOG.Errorf("error: %s", err)
 	}
 	w.Write(b)
 	return
@@ -254,7 +250,7 @@ func webserver() {
 	signal.Notify(killch, syscall.SIGQUIT)
 	go func() {
 		<-killch
-		log.Fatalf("Interrupt %s", time.Now().String())
+		LOG.Fatalf("Interrupt %s", time.Now().String())
 	}()
 
 	httphost := "localhost"
@@ -269,10 +265,10 @@ func webserver() {
 		r.Get("/main/{type}/{hcids}", http.HandlerFunc(mainHandle))
 		http.Handle("/", r)
 
-		log.Debug("Listening %s : %s", httphost, httpport)
+		LOG.Debug("Listening %s : %s", httphost, httpport)
 		err := http.ListenAndServe(httphost+":"+httpport, nil)
 		if err != nil {
-			log.Fatalf("ListenAndServe: %s", err)
+			LOG.Fatalf("ListenAndServe: %s", err)
 		}
 		wg.Done()
 	}()
@@ -287,28 +283,28 @@ func webserver() {
 // - 2nd: go_cmd core/graphite 1418,1419,2502,2694,2932,2933,2695
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 func main() {
-	logFile, err := os.OpenFile(logPath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	LOGFILE, err := os.OpenFile(LOGPATH, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
-		log.Fatalf("Log file error: %s %s", logPath, err)
+		LOG.Fatalf("Log file error: %s %s", LOGPATH, err)
 	}
 	defer func() {
-		logFile.WriteString(fmt.Sprintf("closing %s", time.UnixDate))
-		logFile.Close()
+		LOGFILE.WriteString(fmt.Sprintf("closing %s", time.UnixDate))
+		LOGFILE.Close()
 	}()
 
-	logback := logging.NewLogBackend(logFile, "", 0)
-	logformatted := logging.NewBackendFormatter(logback, logFormat)
+	logback := logging.NewLogBackend(LOGFILE, "", 0)
+	logformatted := logging.NewBackendFormatter(logback, LOGFORMAT)
 	loglevel := "DEBUG"
-	Gloglevel, err := logging.LogLevel(loglevel)
+	GLOGLEVEL, err := logging.LogLevel(loglevel)
 	if err != nil {
-		Gloglevel = logging.DEBUG
+		GLOGLEVEL = logging.DEBUG
 	}
 	logging.SetBackend(logformatted)
-	logging.SetLevel(Gloglevel, "")
+	logging.SetLevel(GLOGLEVEL, "")
 
 	programName := os.Args[0:1]
 	if len(os.Args) < 2 {
-		_hcids = append(_hcids, 1418, 1419, 2502, 2694, 2932, 2933, 2695)
+		HCIDS = append(HCIDS, 1418, 1419, 2502, 2694, 2932, 2933, 2695)
 		_main()
 	} else {
 		typeStr := os.Args[1:2]
@@ -319,7 +315,7 @@ func main() {
 			arry := strings.Split(hcidStr[0], ",")
 			for i := range arry {
 				n, _ := strconv.Atoi(arry[i])
-				_hcids = append(_hcids, n)
+				HCIDS = append(HCIDS, n)
 			}
 		} else {
 			allArgs := os.Args[1:]
@@ -328,9 +324,9 @@ func main() {
 		if typeStr[0] == "web" {
 			webserver()
 		} else {
-			_type = typeStr[0]
+			STYPE = typeStr[0]
 			_main()
 		}
 	}
-	fmt.Println(_hcids)
+	fmt.Println(HCIDS)
 }
