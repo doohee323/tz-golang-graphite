@@ -1,17 +1,32 @@
 package main
 
 import (
+	"bufio"
+	"encoding/json"
 	"fmt"
+	"github.com/gorilla/pat"
+	logging "github.com/op/go-logging"
 	"io/ioutil"
-	"log"
 	"math/big"
 	"net/http"
 	"os"
+	"os/signal"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
+)
+
+//this is log file
+var (
+	logFile   *os.File
+	logPath                 = "/Users/dhong/tmp/test.log"
+	LOGFMT                  = "%{color}%{time:15:04:05.000000} %{shortfunc} ▶ %{level:.4s} %{id:03x}%{color:reset} %{message}"
+	logFormat               = logging.MustStringFormatter(LOGFMT)
+	log                     = logging.MustGetLogger("logfile")
+	Gloglevel logging.Level = logging.DEBUG
 )
 
 var fetched = struct {
@@ -24,24 +39,32 @@ type result struct {
 	content string
 }
 
+const (
+	CORE_URL    = "http://core.local.xdn.com/1/stats/uptime_list?company_id=1&start_time=1464636372&end_time=1464722772&hc_id="
+	GRAPHTE_URL = "http://173.243.129.129/render?target=summarize(averageSeries(dhc.stats.hcid.0.0.1.4.1.8.*.metrics.state.*),%221hour%22,%22avg%22)&target=summarize(averageSeries(dhc.stats.hcid.0.0.1.4.1.8.*.judge.state),%221hour%22,%22avg%22)&from=-1440min&until=-0min&format=json"
+)
+
+var _hcids []int
+var _type string
+
 func fetch(url int) (string, error) {
 	if url == -1 {
 		return "", nil
 	}
 	var urlstr = ""
-	if 1 == 1 {
-		urlstr = "http://core.local.xdn.com/1/stats/uptime_list?company_id=1&start_time=1464636372&end_time=1464722772&hc_id=" + strconv.Itoa(url)
+	if _type == "core" {
+		urlstr = CORE_URL + strconv.Itoa(url)
 	} else {
 		var hcid = "0.0.1.4.1.8"
 		var hcid2 = formatHcid(strconv.Itoa(url))
-		var baseUrl = "http://173.243.129.12/render?target=summarize(averageSeries(dhc.stats.hcid.0.0.1.4.1.8.*.metrics.state.*),%221hour%22,%22avg%22)&target=summarize(averageSeries(dhc.stats.hcid.0.0.1.4.1.8.*.judge.state),%221hour%22,%22avg%22)&from=-1440min&until=-0min&format=json"
+		var baseUrl = GRAPHTE_URL
 		urlstr = strings.Replace(baseUrl, hcid, hcid2, -1)
 	}
 
-	log.Printf("==== %s", urlstr)
+	log.Debug("==== %s", urlstr)
 	res, err := http.Get(urlstr)
 	if err != nil {
-		log.Println(err)
+		log.Debug(err)
 		return "", err
 	}
 	defer res.Body.Close()
@@ -51,16 +74,15 @@ func fetch(url int) (string, error) {
 
 func parseFollowing(url int, doc string, urls chan int) <-chan string {
 	content := make(chan string)
-
 	go func() {
 		content <- doc
 		chk := false
 		val := -1
 		fetched.Lock()
-		for n := range all {
-			if _, ok := fetched.m[all[n]]; !ok {
+		for n := range _hcids {
+			if _, ok := fetched.m[_hcids[n]]; !ok {
 				chk = true
-				val = all[n]
+				val = _hcids[n]
 				break
 			}
 		}
@@ -94,7 +116,7 @@ func crawl(url int, urls chan int, c chan<- result) {
 	fetched.Unlock()
 
 	doc = <-parseFollowing(url, doc, urls)
-	//	log.Printf("---- %d %s", url, doc)
+	//	log.Debug("---- %d %s", url, doc)
 	c <- result{url, doc}
 }
 
@@ -127,7 +149,7 @@ func formatHcid(hcid string) string {
 	for i := 1; i <= pad; i++ {
 		out = fmt.Sprintf("%s.%s", "0", out)
 	}
-	log.Printf("shard: %s", out)
+	log.Debug("shard: %s", out)
 	return out
 }
 
@@ -144,7 +166,7 @@ func _main() int {
 	c := make(chan result)
 
 	var wg sync.WaitGroup
-	const numWorkers = 10
+	const numWorkers = 100
 	wg.Add(numWorkers)
 	for i := 0; i < numWorkers; i++ {
 		go func() {
@@ -155,6 +177,7 @@ func _main() int {
 
 	go func() {
 		wg.Wait()
+		close(urls)
 		close(c)
 	}()
 
@@ -162,42 +185,152 @@ func _main() int {
 
 	count := 0
 	for r := range c {
-		log.Printf("==== %d %s", r.url, r.content)
-
+		log.Debug("==== %d %s", r.url, r.content)
 		count++
-		if count > len(all) {
+		if count > len(_hcids) {
 			close(done)
 			break
 		}
 	}
 
 	elapsed := time.Since(start)
-	log.Printf("It took %s", elapsed)
-
+	log.Debug("It took %s", elapsed)
 	return count - 1
 }
 
-var all []int
+func readLine(path string) string {
+	var content = ""
+	inFile, err := os.Open(path)
+	if err != nil {
+		fmt.Println(err.Error() + `: ` + path)
+		return ""
+	} else {
+		defer inFile.Close()
+	}
+	scanner := bufio.NewScanner(inFile)
+	scanner.Split(bufio.ScanLines)
+	for scanner.Scan() {
+		fmt.Println(scanner.Text()) // the line
+		content += scanner.Text() + "\n"
+	}
+	return content
+}
 
+// http://localhost:8080/main/core/1418,1419,2502,2694,2932,2933,2695
+// http://localhost:8080/main/graphite/1418,1419,2502,2694,2932,2933,2695
+func mainHandle(w http.ResponseWriter, r *http.Request) {
+	_type = r.URL.Query().Get(":type")
+	hcidStr := r.URL.Query().Get(":hcids")
+	fmt.Println(_type, hcidStr)
+
+	arry := strings.Split(hcidStr, ",")
+	for i := range arry {
+		n, _ := strconv.Atoi(arry[i])
+		_hcids = append(_hcids, n)
+	}
+
+	res := make(map[string]string)
+	result := _main()
+
+	res["status"] = "OK"
+	res["ts"] = time.Now().String()
+	res["count"] = strconv.Itoa(result)
+	res["result"] = readLine(logPath)
+
+	b, err := json.Marshal(res)
+	if err != nil {
+		log.Errorf("error: %s", err)
+	}
+	w.Write(b)
+	return
+}
+
+func webserver() {
+	//kill channel to programatically
+	killch := make(chan os.Signal, 1)
+	signal.Notify(killch, os.Interrupt)
+	signal.Notify(killch, syscall.SIGTERM)
+	signal.Notify(killch, syscall.SIGINT)
+	signal.Notify(killch, syscall.SIGQUIT)
+	go func() {
+		<-killch
+		log.Fatalf("Interrupt %s", time.Now().String())
+	}()
+
+	httphost := "localhost"
+	httpport := "8080"
+
+	//we need to start 2 servers, http for status and zmq
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	//first start http interface for self stats
+	go func() {
+		r := pat.New()
+		r.Get("/main/{type}/{hcids}", http.HandlerFunc(mainHandle))
+		http.Handle("/", r)
+
+		log.Debug("Listening %s : %s", httphost, httpport)
+		err := http.ListenAndServe(httphost+":"+httpport, nil)
+		if err != nil {
+			log.Fatalf("ListenAndServe: %s", err)
+		}
+		wg.Done()
+	}()
+
+	wg.Wait()
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+// 2way of run
+// - 1st: go_cmd web
+// 		call from brower: http://localhost:8080/main/core/1418,1419,2502,2694,2932,2933,2695
+// - 2nd: go_cmd core/graphite 1418,1419,2502,2694,2932,2933,2695
+//////////////////////////////////////////////////////////////////////////////////////////////////////
 func main() {
+	logFile, err := os.OpenFile(logPath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("Log file error: %s %s", logPath, err)
+	}
+	defer func() {
+		logFile.WriteString(fmt.Sprintf("closing %s", time.UnixDate))
+		logFile.Close()
+	}()
+
+	logback := logging.NewLogBackend(logFile, "", 0)
+	logformatted := logging.NewBackendFormatter(logback, logFormat)
+	loglevel := "DEBUG"
+	Gloglevel, err := logging.LogLevel(loglevel)
+	if err != nil {
+		Gloglevel = logging.DEBUG
+	}
+	logging.SetBackend(logformatted)
+	logging.SetLevel(Gloglevel, "")
 
 	programName := os.Args[0:1]
-
 	if len(os.Args) < 2 {
-		all = append(all, 1418, 1419, 2502, 2694, 2932, 2933, 2695)
+		_hcids = append(_hcids, 1418, 1419, 2502, 2694, 2932, 2933, 2695)
+		_main()
 	} else {
-		firstArg := os.Args[1:2]
-		//	secondArg := os.Args[2:3]
-		allArgs := os.Args[1:]
-		fmt.Println(programName, firstArg, allArgs)
-
-		arry := strings.Split(firstArg[0], ",")
-		for i := range arry {
-			n, _ := strconv.Atoi(arry[i])
-			all = append(all, n)
+		typeStr := os.Args[1:2]
+		if len(os.Args) >= 3 {
+			hcidStr := os.Args[2:3]
+			allArgs := os.Args[1:]
+			fmt.Println(programName, typeStr, hcidStr, allArgs)
+			arry := strings.Split(hcidStr[0], ",")
+			for i := range arry {
+				n, _ := strconv.Atoi(arry[i])
+				_hcids = append(_hcids, n)
+			}
+		} else {
+			allArgs := os.Args[1:]
+			fmt.Println(programName, typeStr, allArgs)
+		}
+		if typeStr[0] == "web" {
+			webserver()
+		} else {
+			_type = typeStr[0]
+			_main()
 		}
 	}
-	fmt.Println(all)
-
-	_main()
+	fmt.Println(_hcids)
 }
