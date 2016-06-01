@@ -68,7 +68,7 @@ func fetch(url int) (string, error) {
 	return string(doc), nil
 }
 
-func parseFollowing(url int, doc string, urls chan int) <-chan string {
+func parseContent(url int, doc string, urls chan int) <-chan string {
 	content := make(chan string)
 	go func() {
 		content <- doc
@@ -111,7 +111,7 @@ func crawl(url int, urls chan int, c chan<- result) {
 	fetched.m[url] = err
 	fetched.Unlock()
 
-	doc = <-parseFollowing(url, doc, urls)
+	doc = <-parseContent(url, doc, urls)
 	//	LOG.Debug("---- %d %s", url, doc)
 	c <- result{url, doc}
 }
@@ -149,7 +149,7 @@ func formatHcid(hcid string) string {
 	return out
 }
 
-func _main() int {
+func mainExec() int {
 	start := time.Now()
 	r := new(big.Int)
 	fmt.Println(r.Binomial(1000, 10))
@@ -226,7 +226,7 @@ func mainHandle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	res := make(map[string]string)
-	result := _main()
+	result := mainExec()
 
 	res["status"] = "OK"
 	res["ts"] = time.Now().String()
@@ -305,7 +305,7 @@ func main() {
 	programName := os.Args[0:1]
 	if len(os.Args) < 2 {
 		HCIDS = append(HCIDS, 1418, 1419, 2502, 2694, 2932, 2933, 2695)
-		_main()
+		mainExec()
 	} else {
 		typeStr := os.Args[1:2]
 		if len(os.Args) >= 3 {
@@ -325,7 +325,7 @@ func main() {
 			webserver()
 		} else {
 			STYPE = typeStr[0]
-			_main()
+			mainExec()
 		}
 	}
 	fmt.Println(HCIDS)
