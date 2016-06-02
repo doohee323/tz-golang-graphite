@@ -27,7 +27,7 @@ var (
 	LOGFILE     *os.File
 	DOMAIN      string
 	CORE_URL                  = "CORE_URL/1/stats/uptime_list?company_id=1&start_time=1464636372&end_time=1464722772&hc_id="
-	GRAPHTE_URL               = "http://173.243.129.129/render?target=summarize(averageSeries(dhc.stats.hcid.HCID.*.metrics.state.*),%221hour%22,%22avg%22)&target=summarize(averageSeries(dhc.stats.hcid.HCID.*.judge.state),%221hour%22,%22avg%22)&from=-1440min&until=-0min&format=json"
+	GRAPHTE_URL               = "http://173.243.129.12/render?target=summarize(averageSeries(dhc.stats.hcid.HCID.*.metrics.state.*),%221hour%22,%22avg%22)&target=summarize(averageSeries(dhc.stats.hcid.HCID.*.judge.state),%221hour%22,%22avg%22)&from=-1440min&until=-0min&format=json"
 	LOGPATH                   = "/var/log/dashboard/graphite_m.log"
 	LOGFMT                    = "%{color}%{time:15:04:05.000000} %{shortfunc} ▶ %{level:.4s} %{id:03x}%{color:reset} %{message}"
 	LOGFORMAT                 = logging.MustStringFormatter(LOGFMT)
