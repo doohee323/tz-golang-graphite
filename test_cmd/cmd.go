@@ -140,7 +140,6 @@ func formatHcid(hcid string) string {
 
 	out = strings.Trim(out, ".")
 
-	//now lets see how much we need to pad it
 	pad := maxlen - currlen
 	for i := 1; i <= pad; i++ {
 		out = fmt.Sprintf("%s.%s", "0", out)
@@ -180,8 +179,8 @@ func mainExec() int {
 	urls <- -1
 
 	count := 0
-	for r := range c {
-		LOG.Debug("==== %d %s", r.url, r.content)
+	for a := range c {
+		LOG.Debug("==== %d %s", a.url, a.content)
 		count++
 		if count > len(HCIDS) {
 			close(done)
@@ -278,9 +277,9 @@ func webserver() {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 // 2way of run
-// - 1st: go_cmd web
+// - 1st: cmd web
 // 		call from brower: http://localhost:8080/main/core/1418,1419,2502,2694,2932,2933,2695
-// - 2nd: go_cmd core/graphite 1418,1419,2502,2694,2932,2933,2695
+// - 2nd: cmd core/graphite 1418,1419,2502,2694,2932,2933,2695
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 func main() {
 	LOGFILE, err := os.OpenFile(LOGPATH, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
