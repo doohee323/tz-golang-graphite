@@ -3,3 +3,4 @@
 /logs/
 /vendor/
 /glide.lock
+*.log

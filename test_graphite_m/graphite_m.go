@@ -3,9 +3,11 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"github.com/gorilla/pat"
 	logging "github.com/op/go-logging"
+	"github.com/vaughan0/go-ini"
 	"io/ioutil"
 	"math/big"
 	"net/http"
@@ -19,18 +21,21 @@ import (
 	"time"
 )
 
-//this is log file
 var (
 	HCIDS       []int
 	STYPE       string
 	LOGFILE     *os.File
-	CORE_URL                  = "http://core.local.xdn.com/1/stats/uptime_list?company_id=1&start_time=1464636372&end_time=1464722772&hc_id="
-	GRAPHTE_URL               = "http://173.243.129.129/render?target=summarize(averageSeries(dhc.stats.hcid.0.0.1.4.1.8.*.metrics.state.*),%221hour%22,%22avg%22)&target=summarize(averageSeries(dhc.stats.hcid.0.0.1.4.1.8.*.judge.state),%221hour%22,%22avg%22)&from=-1440min&until=-0min&format=json"
-	LOGPATH                   = "/Users/dhong/tmp/test.log"
+	DOMAIN      string
+	CORE_URL                  = "CORE_URL/1/stats/uptime_list?company_id=1&start_time=1464636372&end_time=1464722772&hc_id="
+	GRAPHTE_URL               = "http://173.243.129.129/render?target=summarize(averageSeries(dhc.stats.hcid.HCID.*.metrics.state.*),%221hour%22,%22avg%22)&target=summarize(averageSeries(dhc.stats.hcid.HCID.*.judge.state),%221hour%22,%22avg%22)&from=-1440min&until=-0min&format=json"
+	LOGPATH                   = "/var/log/dashboard/graphite_m.log"
 	LOGFMT                    = "%{color}%{time:15:04:05.000000} %{shortfunc} ▶ %{level:.4s} %{id:03x}%{color:reset} %{message}"
 	LOGFORMAT                 = logging.MustStringFormatter(LOGFMT)
 	LOG                       = logging.MustGetLogger("logfile")
 	GLOGLEVEL   logging.Level = logging.DEBUG
+	CONFIGFILE                = "/etc/dashboard/dashboard.ini"
+	configfile  *string       = flag.String("config", CONFIGFILE, "Config file location default: "+CONFIGFILE)
+	cfg         ini.File
 )
 
 type FetchedResult struct {
@@ -59,13 +64,13 @@ func fetch(url int) (string, error) {
 		return "", nil
 	}
 	var urlstr = ""
-	if STYPE == "core" {
-		urlstr = CORE_URL + strconv.Itoa(url)
-	} else {
-		var hcid = "0.0.1.4.1.8"
-		var hcid2 = formatHcid(strconv.Itoa(url))
+	if STYPE == "graphite" {
+		var hcid = formatHcid(strconv.Itoa(url))
 		var baseUrl = GRAPHTE_URL
-		urlstr = strings.Replace(baseUrl, hcid, hcid2, -1)
+		urlstr = strings.Replace(baseUrl, "HCID", hcid, -1)
+	} else {
+		core_url := strings.Replace(CORE_URL, "CORE_URL", DOMAIN, -1)
+		urlstr = core_url + strconv.Itoa(url)
 	}
 
 	LOG.Debug("==== %s", urlstr)
@@ -234,8 +239,7 @@ func mainExec() map[string]string {
 	return result
 }
 
-func readLine(path string) string {
-	var content = ""
+func readValConf(path string, key string) string {
 	inFile, err := os.Open(path)
 	if err != nil {
 		fmt.Println(err.Error() + `: ` + path)
@@ -246,10 +250,13 @@ func readLine(path string) string {
 	scanner := bufio.NewScanner(inFile)
 	scanner.Split(bufio.ScanLines)
 	for scanner.Scan() {
-		fmt.Println(scanner.Text()) // the line
-		content += scanner.Text() + "\n"
+		str := scanner.Text()
+		if strings.Index(str, key) != -1 {
+			str = str[strings.Index(str, "=")+1 : len(str)]
+			return strings.Replace(strings.TrimSpace(str), "\"", "", -1)
+		}
 	}
-	return content
+	return ""
 }
 
 // http://localhost:8080/main/core/1418,1419,2502,2694,2932,2933,2695
@@ -276,7 +283,6 @@ func mainHandle(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(str)
 	res["count"] = strconv.Itoa(len(result) - 1)
 	res["result"] = string(str)
-//	res["result"] = readLine(LOGPATH)
 
 	b, err := json.Marshal(res)
 	if err != nil {
@@ -328,9 +334,16 @@ func webserver() {
 // - 2nd: graphite_m core/graphite 1418,1419,2502,2694,2932,2933,2695
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 func main() {
-	LOGFILE, err := os.OpenFile(LOGPATH, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+
+	var logfile = LOGPATH
+	if _, err := os.Stat(LOGPATH); err != nil {
+		LOGPATH, _ := os.Getwd()
+		logfile = LOGPATH + "/graphite_m.log"
+	}
+
+	LOGFILE, err := os.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
-		LOG.Fatalf("Log file error: %s %s", LOGPATH, err)
+		LOG.Fatalf("Log file error: %s %s", logfile, err)
 	}
 	defer func() {
 		LOGFILE.WriteString(fmt.Sprintf("closing %s", time.UnixDate))
@@ -346,6 +359,20 @@ func main() {
 	}
 	logging.SetBackend(logformatted)
 	logging.SetLevel(GLOGLEVEL, "")
+
+	//	cfg, err := ini.LoadFile(*configfile)
+	//	if err != nil {
+	//		LOG.Fatalf("parse config "+*configfile+" file error: %s", err)
+	//	}
+	//
+	//	logfile, ok := cfg.Get("core_api_url", "logfile")
+	//	if !ok {
+	//		LOG.Fatalf("'logfile' missing from 'system' section")
+	//	}
+	DOMAIN = readValConf(CONFIGFILE, "core_api_url")
+	if DOMAIN == "" {
+		DOMAIN = "http://core.local.xdn.com"
+	}
 
 	programName := os.Args[0:1]
 	if len(os.Args) < 2 {
