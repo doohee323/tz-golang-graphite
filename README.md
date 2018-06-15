@@ -1,4 +1,4 @@
-# tz_golang_graphite
+# tz-golang-graphite
 
 1. Install Golang
   
@@ -17,7 +17,7 @@
   export GOPATH=/Users/dhong/Documents/workspace/go
   mkdir $GOPATH  
   cd $GOPATH  
-  cd src/tz.com/tz_golang_graphite
+  cd src/tz.com/tz-golang-graphite
 
   glide up
 
