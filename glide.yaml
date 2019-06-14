@@ -1,4 +1,4 @@
-package: tz.com/tz_golang_graphite
+package: .
 import:
 - package: github.com/marpaia/graphite-golang
 - package: github.com/op/go-logging

@@ -1,6 +1,6 @@
 /**
 * Graphite Module by Dewey
-* Usage: tzgraphite -method=simplesend -key=deploys.test1.count2 -value=50 (-config=/Users/dhong/Documents/workspace/go/src/tz.com/tz_golang_graphite/etc/graphite.cfg)
+* Usage: tzgraphite -method=simplesend -key=deploys.test1.count2 -value=50 (-config=/Users/dhong/Documents/workspace/go/src/tz.com/tz-golang-graphite/etc/graphite.cfg)
 **/
 
 package main
@@ -13,7 +13,7 @@ import (
 //	"runtime"
 	"strconv"
 	"time"
-	tz "tz.com/tz_golang_graphite/libs"
+	tz "../libs"
 )
 
 // local variables

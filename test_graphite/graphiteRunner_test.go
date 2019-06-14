@@ -1,6 +1,6 @@
 /**
 * Graphite Module by Dewey
-* Usage: tzgraphite.test -config=/Users/dhong/Documents/workspace/go/src/tz.com/tz_golang_graphite/etc/graphite.cfg
+* Usage: tzgraphite.test -config=/Users/dhong/Documents/workspace/go/src/tz.com/tz-golang-graphite/etc/graphite.cfg
 **/
 
 package main
@@ -16,7 +16,7 @@ import (
 	"strings"
 	"testing"
 	"time"
-	tz "tz.com/tz_golang_graphite/libs"
+	tz "../libs"
 )
 
 func TestXxx(t *testing.T) {
@@ -36,7 +36,7 @@ func TestXxx(t *testing.T) {
 	
 	var test_types = []string{"simplesend", "sendmetric", "sendmetrics"}
 	//	pwd, _ := os.Getwd()
-	pwd := "/Users/dhong/Documents/workspace/go/src/tz.com/tz_golang_graphite"
+	pwd := "/Users/dhong/Documents/workspace/go/src/tz.com/tz-golang-graphite"
 	result := 0
 	for _, tType := range test_types {
 		test_file := pwd + "/etc/" + tType + ".txt"

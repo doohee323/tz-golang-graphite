@@ -4,8 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/pat"
-	logging "github.com/op/go-logging"
 	"io/ioutil"
 	"math/big"
 	"net/http"
@@ -17,6 +15,9 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/gorilla/pat"
+	logging "github.com/op/go-logging"
 )
 
 //this is log file
